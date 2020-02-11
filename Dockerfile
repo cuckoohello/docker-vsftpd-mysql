@@ -4,11 +4,16 @@ RUN curl -L  https://github.com/NigelCunningham/pam-MySQL/archive/v0.8.1.tar.gz 
 RUN mkdir -p /root/pam-mysql && tar xvf /root/pam-mysql.tar.gz -C /root/pam-mysql --strip-components 1
 RUN cd /root/pam-mysql && autoreconf -i && ./configure && make install && strip /lib/security/pam_mysql.so
 
+FROM golang:1-alpine as golang
+RUN apk update && apk add binutils git
+RUN go get github.com/drone/envsubst/cmd/envsubst && strip /go/bin/envsubst
+
 FROM alpine:3
-RUN apk add --no-cache mariadb-connector-c tzdata linux-pam vsftpd gettext
+RUN apk add --no-cache mariadb-connector-c tzdata linux-pam vsftpd
 ENV TZ Asia/Shanghai
 
 COPY --from=build /lib/security/pam_mysql.so /lib/security/pam_mysql.so
+COPY --from=golang /go/bin/envsubst /bin/envsubst
 COPY vsftpd.sh /usr/sbin/
 COPY vsftpd.conf.tpl vsftpd.mysql.tpl /config/
 
